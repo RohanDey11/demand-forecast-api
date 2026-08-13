@@ -1,0 +1,12 @@
+fastapi==0.110.0
+uvicorn==0.27.1
+pydantic==2.6.1
+prophet==1.1.5
+pandas==2.2.1
+numpy==1.26.4
+cmdstanpy==1.2.4
+apscheduler==3.10.4
+holidays==0.33
+python-multipart==0.0.9
+httpx==0.27.0
+pytest==8.1.1
