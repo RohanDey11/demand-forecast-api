@@ -1,20 +1,21 @@
-FROM python:3.8-slim
+FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential gcc g++ python3-dev \
-    && rm -rf /var/lib/apt/lists/*
+    build-essential curl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY requirements.txt .
+ENV CMDSTAN=/opt/cmdstan
+RUN mkdir -p /opt && \
+    curl -L https://github.com/stan-dev/cmdstan/releases/download/v2.33.1/cmdstan-2.33.1.tar.gz -o /tmp/cmdstan.tar.gz && \
+    tar -xzf /tmp/cmdstan.tar.gz -C /opt && \
+    mv /opt/cmdstan-2.33.1 /opt/cmdstan && \
+    rm /tmp/cmdstan.tar.gz
 
-RUN pip install --upgrade pip wheel setuptools
-RUN pip install --no-cache-dir Cython==0.29.36 numpy==1.21.6
-RUN pip install --no-cache-dir pystan==2.19.1.1
+COPY requirements.txt .
+RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
-
 EXPOSE 8000
-
 CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
