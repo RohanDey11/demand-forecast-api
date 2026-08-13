@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demand Forecasting API — Live Production Demo</title>
+<style>
+  :root{
+    --ink:#0B1220;
+    --surface:#141B29;
+    --surface-2:#1B2436;
+    --border:#26314A;
+    --text:#EDEFF5;
+    --text-muted:#8B93A7;
+    --amber:#E8A33D;
+    --amber-soft:rgba(232,163,61,0.14);
+    --amber-line:rgba(232,163,61,0.65);
+    --amber-fill:rgba(232,163,61,0.16);
+    --green:#4ADE80;
+    --error:#E0654B;
+    --error-soft:rgba(224,101,75,0.14);
+    --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --font-mono:ui-monospace,"SF Mono","Cascadia Code","Roboto Mono",Menlo,Consolas,monospace;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
+  }
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--text);
+    font-family:var(--font-sans);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--amber);}
+  a:focus-visible, button:focus-visible, input:focus-visible{
+    outline:2px solid var(--amber);
+    outline-offset:2px;
+  }
+  .wrap{max-width:960px;margin:0 auto;padding:0 24px;}
+
+  /* ---------- Hero ---------- */
+  .hero{padding:64px 0 40px;}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:var(--font-mono);font-size:12px;letter-spacing:0.06em;
+    color:var(--green);text-transform:uppercase;
+    background:rgba(74,222,128,0.08);
+    border:1px solid rgba(74,222,128,0.25);
+    padding:5px 10px;border-radius:100px;
+    margin-bottom:20px;
+  }
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--green);
+    box-shadow:0 0 0 3px rgba(74,222,128,0.18);}
+  h1{
+    font-size:clamp(28px,4.2vw,42px);
+    line-height:1.15;
+    margin:0 0 14px;
+    font-weight:650;
+    letter-spacing:-0.01em;
+    max-width:14ch;
+  }
+  .sub{
+    color:var(--text-muted);
+    font-size:16px;
+    max-width:56ch;
+    margin:0 0 32px;
+  }
+  .sub b{color:var(--text);font-weight:600;}
+
+  /* ---------- Stat row ---------- */
+  .stats{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
+    background:var(--border);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    overflow:hidden;
+    margin-bottom:40px;
+  }
+  .stat{background:var(--surface);padding:16px 18px;}
+  .stat-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;}
+  .stat-value{font-family:var(--font-mono);font-size:20px;color:var(--amber);font-weight:600;}
+  @media (max-width:640px){.stats{grid-template-columns:repeat(2,1fr);}}
+
+  /* ---------- Demo card ---------- */
+  .demo{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:28px;
+    margin-bottom:56px;
+  }
+  .demo-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:20px;}
+  .demo-title{font-size:17px;font-weight:600;margin:0 0 4px;}
+  .demo-note{color:var(--text-muted);font-size:13px;margin:0;}
+  .controls{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:22px;}
+  .field label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;}
+  .field input{
+    font-family:var(--font-mono);
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:8px;
+    padding:10px 12px;
+    width:120px;
+    font-size:15px;
+  }
+  .field .hint{font-size:11px;color:var(--text-muted);margin-top:6px;}
+  button.primary{
+    font-family:var(--font-sans);
+    background:var(--amber);
+    color:#1a1206;
+    border:none;
+    border-radius:8px;
+    padding:11px 20px;
+    font-size:14px;
+    font-weight:650;
+    cursor:pointer;
+    transition:transform 0.12s ease, opacity 0.12s ease;
+  }
+  button.primary:hover{opacity:0.92;}
+  button.primary:active{transform:scale(0.98);}
+  button.primary:disabled{opacity:0.55;cursor:default;}
+
+  .result-area{min-height:260px;}
+  .state{
+    display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+    min-height:220px;
+    border:1px dashed var(--border);
+    border-radius:10px;
+    padding:24px;
+    color:var(--text-muted);
+    font-size:14px;
+  }
+  .state.error{border-color:rgba(224,101,75,0.4);background:var(--error-soft);color:#F5B8A6;}
+  .state-title{font-weight:600;color:var(--text);margin-bottom:4px;}
+  .state.error .state-title{color:var(--error);}
+  .spinner{
+    width:16px;height:16px;border-radius:50%;
+    border:2px solid var(--border);border-top-color:var(--amber);
+    animation:spin 0.8s linear infinite;
+    margin-bottom:12px;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .chart-wrap{margin-bottom:18px;}
+  svg{width:100%;height:auto;display:block;}
+  .meta-row{display:flex;justify-content:space-between;color:var(--text-muted);font-size:12px;font-family:var(--font-mono);margin-top:8px;}
+
+  table.forecast-table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:13px;margin-top:16px;}
+  table.forecast-table th{
+    text-align:left;color:var(--text-muted);font-weight:500;
+    border-bottom:1px solid var(--border);padding:8px 10px;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;
+  }
+  table.forecast-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text);}
+  table.forecast-table tr:last-child td{border-bottom:none;}
+  .table-scroll{max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;}
+
+  /* ---------- Pipeline ---------- */
+  .section{margin-bottom:56px;}
+  .section h2{font-size:20px;margin:0 0 6px;}
+  .section .lede{color:var(--text-muted);font-size:14px;margin:0 0 24px;max-width:60ch;}
+  .pipeline{display:flex;gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+  .pipe-step{flex:1;padding:18px;background:var(--surface);position:relative;}
+  .pipe-step + .pipe-step{border-left:1px solid var(--border);}
+  .pipe-num{font-family:var(--font-mono);font-size:11px;color:var(--amber);margin-bottom:8px;}
+  .pipe-title{font-size:14px;font-weight:600;margin-bottom:4px;}
+  .pipe-body{font-size:13px;color:var(--text-muted);}
+  @media (max-width:720px){
+    .pipeline{flex-direction:column;}
+    .pipe-step + .pipe-step{border-left:none;border-top:1px solid var(--border);}
+  }
+
+  /* ---------- Engineering ---------- */
+  .eng-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .eng-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;}
+  .eng-card h3{font-size:14px;margin:0 0 8px;}
+  .eng-card p{font-size:13px;color:var(--text-muted);margin:0;}
+  @media (max-width:720px){.eng-grid{grid-template-columns:1fr;}}
+
+  /* ---------- Footer ---------- */
+  footer{border-top:1px solid var(--border);padding:28px 0 48px;}
+  .footer-links{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;margin-bottom:14px;}
+  .footer-credit{color:var(--text-muted);font-size:13px;}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <section class="hero">
+    <span class="eyebrow"><span class="dot"></span>Live production API</span>
+    <h1>Pick a horizon. Get a forecast.</h1>
+    <p class="sub">
+      A Prophet-based forecasting service trained on <b>106 weeks</b> of UK retail sales,
+      deployed as a monitored API with a scheduled refresh — not a notebook you have to run yourself.
+    </p>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Model</div>
+        <div class="stat-value" style="font-size:15px;">Prophet</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Tuned params</div>
+        <div class="stat-value" style="font-size:15px;">0.5 / 10.0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">History used</div>
+        <div class="stat-value" style="font-size:15px;">106 wks</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Max horizon</div>
+        <div class="stat-value" style="font-size:15px;">22 wks</div>
+      </div>
+    </div>
+
+    <div class="demo" id="demo">
+      <div class="demo-head">
+        <div>
+          <p class="demo-title">Try it live</p>
+          <p class="demo-note">Calls the real <code>/forecast</code> endpoint running behind this page — nothing here is mocked.</p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="field">
+          <label for="horizon">Horizon (weeks)</label>
+          <input id="horizon" type="number" inputmode="numeric" value="12" min="0" max="99" step="1">
+          <div class="hint">Accepts 1–22. Try something outside that range to see how it's rejected.</div>
+        </div>
+        <button class="primary" id="go" onclick="runForecast()">Get forecast</button>
+      </div>
+
+      <div class="result-area" id="resultArea">
+        <div class="state" id="idleState">
+          <div class="state-title">No forecast yet</div>
+          <div>Enter a horizon above and press <b style="color:var(--text)">Get forecast</b>.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>How a request is handled</h2>
+    <p class="lede">Every call follows the same four steps — nothing is computed ad hoc.</p>
+    <div class="pipeline">
+      <div class="pipe-step">
+        <div class="pipe-num">01</div>
+        <div class="pipe-title">You choose a horizon</div>
+        <div class="pipe-body">Any whole number of weeks you want to see ahead.</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-num">02</div>
+        <div class="pipe-title">Request is validated</div>
+        <div class="pipe-body">Anything outside 1–22 weeks is rejected immediately, before it reaches the model.</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-num">03</div>
+        <div class="pipe-title">Cached forecast is read</div>
+        <div class="pipe-body">The model refits once a day, not on every request — so answers are fast.</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-num">04</div>
+        <div class="pipe-title">You get dates + range</div>
+        <div class="pipe-body">Predicted sales per week, with an upper and lower bound, not just one number.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Why this is a service, not a script</h2>
+    <p class="lede">Two decisions that separate this from a Jupyter cell someone re-runs by hand.</p>
+    <div class="eng-grid">
+      <div class="eng-card">
+        <h3>Refits on a schedule, not per request</h3>
+        <p>Fitting a fresh model on every single call would make each request slow and unpredictable. Instead, the model refits automatically once a day and every request simply reads from that cached result — fast to answer, current within a day.</p>
+      </div>
+      <div class="eng-card">
+        <h3>Built to survive a heavy dependency</h3>
+        <p>The forecasting engine needs a C++ compiler to build itself on first install. The deploy uses a two-stage build: compile once in a throwaway build stage, then copy only the finished, working environment into the image that actually runs — so the live service stays lean.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-links">
+      <a href="/docs">Swagger docs</a>
+      <a href="/health">Health check</a>
+      <a href="https://github.com/RohanDey11/demand-forecast-api" target="_blank" rel="noopener">GitHub repo</a>
+    </div>
+    <div class="footer-credit">Rohan Dey — MSc Data Science · Ex AI Research Intern @ TCG CREST · BS Data Science, IIT Madras</div>
+  </footer>
+
+</div>
+
+<script>
+async function runForecast(){
+  const btn = document.getElementById('go');
+  const area = document.getElementById('resultArea');
+  const horizonInput = document.getElementById('horizon');
+  const horizon = parseInt(horizonInput.value, 10);
+
+  btn.disabled = true;
+  btn.textContent = 'Predicting…';
+  area.innerHTML = `
+    <div class="state">
+      <div class="spinner"></div>
+      <div class="state-title">Calculating forecast…</div>
+      <div>If the service has been idle, the first request can take up to 20 seconds while it wakes up.</div>
+    </div>`;
+
+  const started = performance.now();
+
+  try {
+    const res = await fetch('/forecast', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ horizon_weeks: horizon })
+    });
+    const elapsed = Math.round(performance.now() - started);
+    const data = await res.json();
+
+    if (!res.ok) {
+      area.innerHTML = renderError(data, res.status);
+    } else {
+      area.innerHTML = renderResult(data, elapsed);
+    }
+  } catch (err) {
+    area.innerHTML = `
+      <div class="state error">
+        <div class="state-title">Couldn't reach the forecast service</div>
+        <div>${escapeHtml(err.message || 'Network error')} — the service may still be waking up. Try again in a few seconds.</div>
+      </div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Get forecast';
+  }
+}
+
+function friendlyMessage(detail){
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail) && detail.length){
+    return detail.map(d => d.msg || JSON.stringify(d)).join(' · ');
+  }
+  return 'Request was rejected by the server.';
+}
+
+function renderError(data, status){
+  const msg = friendlyMessage(data && data.detail);
+  return `
+    <div class="state error">
+      <div class="state-title">${status} — request rejected</div>
+      <div>${escapeHtml(msg)}</div>
+    </div>`;
+}
+
+function renderResult(data, elapsedMs){
+  const points = data.forecast || [];
+  if (!points.length){
+    return `<div class="state"><div class="state-title">No forecast points returned</div></div>`;
+  }
+  const chart = buildChartSVG(points);
+  const rows = points.map(p => `
+    <tr>
+      <td>${escapeHtml(p.ds)}</td>
+      <td>£${fmt(p.yhat)}</td>
+      <td>£${fmt(p.yhat_lower)}</td>
+      <td>£${fmt(p.yhat_upper)}</td>
+    </tr>`).join('');
+
+  return `
+    <div class="chart-wrap">${chart}</div>
+    <div class="meta-row">
+      <span>${points.length} week${points.length>1?'s':''} returned</span>
+      <span>${elapsedMs}ms</span>
+    </div>
+    <div class="table-scroll">
+      <table class="forecast-table">
+        <thead><tr><th>Week of</th><th>Forecast</th><th>Low</th><th>High</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function buildChartSVG(points){
+  const W = 600, H = 220, PAD = 28;
+  const vals = points.flatMap(p => [p.yhat_lower, p.yhat_upper]);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const range = (max - min) || 1;
+
+  const x = i => points.length === 1 ? W/2 : PAD + (i * (W - 2*PAD)) / (points.length - 1);
+  const y = v => H - PAD - ((v - min) / range) * (H - 2*PAD);
+
+  const upperPts = points.map((p,i) => `${x(i)},${y(p.yhat_upper)}`).join(' ');
+  const lowerPts = points.slice().reverse().map((p,i) => `${x(points.length-1-i)},${y(p.yhat_lower)}`).join(' ');
+  const areaPath = `M${upperPts} L${lowerPts} Z`;
+  const linePts = points.map((p,i) => `${x(i)},${y(p.yhat)}`).join(' ');
+  const dots = points.map((p,i) => `<circle cx="${x(i)}" cy="${y(p.yhat)}" r="3" fill="var(--amber)"><title>${escapeHtml(p.ds)}: £${fmt(p.yhat)}</title></circle>`).join('');
+
+  const gridLines = [0.25, 0.5, 0.75].map(f => {
+    const gy = PAD + f * (H - 2*PAD);
+    const val = max - f * range;
+    return `<line x1="${PAD}" y1="${gy}" x2="${W-PAD}" y2="${gy}" stroke="var(--border)" stroke-width="1"/>
+            <text x="${PAD}" y="${gy-4}" font-family="var(--font-mono)" font-size="9" fill="var(--text-muted)">£${fmtK(val)}</text>`;
+  }).join('');
+
+  const firstLabel = points[0].ds;
+  const lastLabel = points[points.length-1].ds;
+
+  return `
+  <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Forecast chart">
+    ${gridLines}
+    <path d="${areaPath}" fill="var(--amber-fill)" stroke="none"/>
+    <polyline points="${linePts}" fill="none" stroke="var(--amber-line)" stroke-width="2"/>
+    ${dots}
+    <text x="${PAD}" y="${H-6}" font-family="var(--font-mono)" font-size="10" fill="var(--text-muted)">${escapeHtml(firstLabel)}</text>
+    <text x="${W-PAD}" y="${H-6}" text-anchor="end" font-family="var(--font-mono)" font-size="10" fill="var(--text-muted)">${escapeHtml(lastLabel)}</text>
+  </svg>`;
+}
+
+function fmt(n){ return Number(n).toLocaleString(undefined, {maximumFractionDigits:0}); }
+function fmtK(n){ return Math.round(n/1000) + 'k'; }
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+</script>
+
+</body>
+</html>
